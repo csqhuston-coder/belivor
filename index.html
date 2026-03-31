@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Belivor — Venture Architecture</title>
+  <meta name="description" content="Belivor is the holding architecture behind a portfolio of rapidly developed, vertically scalable businesses spanning AI, alternative assets, biotech, fintech, and beyond." />
+  <meta property="og:title" content="Belivor — Venture Architecture" />
+  <meta property="og:description" content="Building vertically. Exiting brilliantly." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://belivor.com" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0e0d0c;
+      --surface:  #161514;
+      --card:     #1c1a18;
+      --card-hover: #221f1c;
+      --border:   rgba(255,255,255,0.07);
+      --border-hover: rgba(176,125,74,0.4);
+      --ink:      #f0ede8;
+      --muted:    #8a857d;
+      --faint:    #4a4540;
+      --accent:   #b07d4a;
+      --accent-dim: rgba(176,125,74,0.12);
+      --accent-glow: rgba(176,125,74,0.06);
+      --green:    #2d6e4e;
+      --green-bg: rgba(45,110,78,0.15);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grain overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(14,13,12,0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 56px;
+    }
+
+    .nav-logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--ink);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    .nav-cta {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      border: 1px solid rgba(176,125,74,0.3);
+      padding: 7px 14px;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+    }
+
+    /* Mobile nav toggle */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px;
+    }
+
+    .nav-hamburger span {
+      display: block;
+      width: 22px;
+      height: 1px;
+      background: var(--muted);
+      transition: all 0.3s;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 96px 0 80px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(176,125,74,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.1s;
+    }
+
+    .hero-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(42px, 6vw, 68px);
+      line-height: 1.05;
+      letter-spacing: -2px;
+      color: var(--ink);
+      margin-bottom: 28px;
+      max-width: 640px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.2s;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero-body {
+      font-size: 13px;
+      line-height: 1.9;
+      color: var(--muted);
+      max-width: 480px;
+      margin-bottom: 48px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.3s;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.4s;
+    }
+
+    .stat { border-left: 1px solid var(--border); padding-left: 20px; }
+
+    .stat-num {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      color: var(--ink);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--faint);
+    }
+
+    /* ── Section ── */
+    .section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+    .section:last-child { border-bottom: none; }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 28px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--faint);
+    }
+
+    .section-count {
+      font-size: 10px;
+      color: var(--faint);
+    }
+
+    /* ── Ventures Grid ── */
+    .ventures-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .venture-card {
+      background: var(--card);
+      padding: 28px 28px 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      position: relative;
+    }
+
+    .venture-card:hover { background: var(--card-hover); }
+
+    .venture-card.featured {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 24px;
+    }
+
+    .vc-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .vc-stage {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 3px 8px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    .stage-mvp      { background: var(--green-bg); color: #4caf85; border: 1px solid rgba(76,175,133,0.2); }
+    .stage-building { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(176,125,74,0.2); }
+    .stage-research { background: rgba(255,255,255,0.04); color: var(--faint); border: 1px solid var(--border); }
+
+    .vc-arrow {
+      font-size: 18px;
+      color: var(--faint);
+      transition: color 0.2s, transform 0.2s;
+      line-height: 1;
+    }
+
+    .venture-card:hover .vc-arrow { color: var(--accent); transform: translate(2px, -2px); }
+
+    .vc-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--ink);
+      margin-bottom: 4px;
+      line-height: 1.1;
+    }
+
+    .venture-card.featured .vc-name { font-size: 26px; }
+
+    .vc-url {
+      font-size: 10px;
+      color: var(--faint);
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+
+    .vc-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ── Thesis ── */
+    .thesis-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .thesis-block::before {
+      content: '\201C';
+      position: absolute;
+      top: -20px;
+      left: 32px;
+      font-family: 'DM Serif Display', serif;
+      font-size: 160px;
+      color: var(--accent);
+      opacity: 0.08;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .thesis-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(20px, 3vw, 26px);
+      line-height: 1.5;
+      color: var(--ink);
+      font-style: italic;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 24px;
+    }
+
+    .thesis-attribution {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--faint);
+    }
+
+    /* ── Process ── */
+    .process-list {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .process-step {
+      background: var(--card);
+      padding: 28px 24px;
+    }
+
+    .step-num {
+      font-family: 'DM Serif Display', serif;
+      font-size: 36px;
+      color: var(--accent);
+      opacity: 0.4;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+
+    .step-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .step-desc {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ── Contact ── */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .contact-left h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      color: var(--ink);
+      line-height: 1.2;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .contact-left p {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 24px;
+    }
+
+    .contact-email {
+      display: inline-block;
+      font-size: 13px;
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(176,125,74,0.3);
+      padding-bottom: 2px;
+      transition: border-color 0.2s;
+    }
+
+    .contact-email:hover { border-color: var(--accent); }
+
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .contact-form input,
+    .contact-form textarea,
+    .contact-form select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .contact-form input::placeholder,
+    .contact-form textarea::placeholder { color: var(--faint); }
+
+    .contact-form input:focus,
+    .contact-form textarea:focus,
+    .contact-form select:focus { border-color: rgba(176,125,74,0.5); }
+
+    .contact-form textarea { resize: vertical; min-height: 100px; }
+
+    .contact-form select { color: var(--faint); }
+    .contact-form select option { background: var(--surface); color: var(--ink); }
+
+    .form-submit {
+      background: var(--accent);
+      color: var(--bg);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      align-self: flex-start;
+    }
+
+    .form-submit:hover { opacity: 0.85; }
+
+    .form-note {
+      font-size: 10px;
+      color: var(--faint);
+      margin-top: 4px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: var(--ink);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--faint);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--muted); }
+
+    .footer-copy {
+      font-size: 10px;
+      color: var(--faint);
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .container { padding: 0 20px; }
+
+      .nav-links, .nav-cta { display: none; }
+      .nav-hamburger { display: flex; }
+
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 56px;
+        left: 0;
+        right: 0;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        padding: 20px 24px;
+        gap: 16px;
+        z-index: 99;
+      }
+
+      .hero { padding: 60px 0 48px; }
+      .hero-stats { gap: 24px; }
+      .stat-num { font-size: 24px; }
+
+      .ventures-grid { grid-template-columns: 1fr; }
+      .venture-card.featured { grid-template-columns: 1fr; }
+
+      .process-list { grid-template-columns: 1fr 1fr; }
+
+      .contact-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+
+      .footer-inner { flex-direction: column; gap: 16px; text-align: center; }
+      .footer-links { flex-wrap: wrap; justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+      .process-list { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cursor dot ── */
+    .cursor-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transition: transform 0.15s ease, opacity 0.3s ease;
+      mix-blend-mode: normal;
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cursor-dot" id="cursor"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="container">
+      <div class="nav-inner">
+        <a href="#" class="nav-logo">Belivor</a>
+        <ul class="nav-links" id="nav-links">
+          <li><a href="#ventures">Ventures</a></li>
+          <li><a href="#thesis">Thesis</a></li>
+          <li><a href="#process">Process</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+        <a href="#contact" class="nav-cta">Get in touch</a>
+        <button class="nav-hamburger" id="hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-eyebrow">Venture Architecture</div>
+      <h1 class="hero-title">Building vertically.<br><em>Exiting brilliantly.</em></h1>
+      <p class="hero-body">
+        Belivor is the holding architecture behind a portfolio of rapidly developed,
+        vertically scalable businesses — spanning AI, alternative assets, biotech,
+        fintech, and beyond.
+      </p>
+      <div class="hero-stats">
+        <div class="stat">
+          <div class="stat-num">7</div>
+          <div class="stat-label">Active ventures</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">2025</div>
+          <div class="stat-label">Founded</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">∞</div>
+          <div class="stat-label">Exit ceiling</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VENTURES -->
+  <section class="section" id="ventures">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-label">Current portfolio</span>
+        <span class="section-count">07 ventures</span>
+      </div>
+      <div class="ventures-grid reveal">
+
+        <!-- Featured -->
+        <a class="venture-card featured" href="https://chatgptesus.com" target="_blank" rel="noopener">
+          <div>
+            <div class="vc-top">
+              <span class="vc-stage stage-mvp">MVP ready</span>
+            </div>
+            <div class="vc-name">ChatGPTesus</div>
+            <div class="vc-url">chatgptesus.com</div>
+            <div class="vc-desc">
+              A faith-rooted AI companion. Answers life's hardest questions through
+              a Christian lens — built on modern LLM infrastructure with a voice
+              shaped by scripture, wisdom, and grace.
+            </div>
+          </div>
+          <div class="vc-arrow">↗</div>
+        </a>
+
+        <a class="venture-card" href="https://thewatchist.com" target="_blank" rel="noopener">
+          <div class="vc-top">
+            <span class="vc-stage stage-building">Building</span>
+            <div class="vc-arrow">↗</div>
+          </div>
+          <div class="vc-name">The Watchist</div>
+          <div class="vc-url">thewatchist.com</div>
+          <div class="vc-desc">Alternative asset trading platform for luxury watches. Authenticated. Liquid. Yours.</div>
+        </a>
+
+        <a class="venture-card" href="https://richeiq.com" target="_blank" rel="noopener">
+          <div class="vc-top">
+            <span class="vc-stage stage-research">Research</span>
+            <div class="vc-arrow">↗</div>
+          </div>
+          <div class="vc-name">RicheIQ</div>
+          <div class="vc-url">richeiq.com</div>
+          <div class="vc-desc">An alternative credit score built on real asset ownership. Watches, cars, art, real estate.</div>
+        </a>
+
+        <a class="venture-card" href="https://zerosided.com" target="_blank" rel="noopener">
+          <div class="vc-top">
+            <span class="vc-stage stage-building">Building</span>
+            <div class="vc-arrow">↗</div>
+          </div>
+          <div class="vc-name">ZeroSided</div>
+          <div class="vc-url">zerosided.com</div>
+          <div class="vc-desc">Crypto 100x sniper. Mission: financial sovereignty and liberation from the central banking paradigm.</div>
+        </a>
+
+        <a class="venture-card" href="https://bandhbio.com" target="_blank" rel="noopener">
+          <div class="vc-top">
+            <span class="vc-stage stage-building">Building</span>
+            <div class="vc-arrow">↗</div>
+          </div>
+          <div class="vc-name">BandhBio</div>
+          <div class="vc-url">bandhbio.com</div>
+          <div class="vc-desc">Medical-grade biologics and next-generation health supply catalog. Starting with exosomes.</div>
+        </a>
+
+        <a class="venture-card" href="#contact">
+          <div class="vc-top">
+            <span class="vc-stage stage-research">Research</span>
+            <div class="vc-arrow">↗</div>
+          </div>
+          <div class="vc-name">OpenSafe</div>
+          <div class="vc-url">Coming soon</div>
+          <div class="vc-desc">Open 24/7. A sanctuary for physical, mental, and spiritual health — a new model for human care.</div>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- THESIS -->
+  <section class="section" id="thesis">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-label">The thesis</span>
+      </div>
+      <div class="thesis-block reveal">
+        <p class="thesis-text">
+          "The best businesses don't fill a gap — they create a category.
+          We build the category, validate the model, then architect the exit.
+          Every venture feeds the next. Nothing is siloed. Everything compounds."
+        </p>
+        <div class="thesis-attribution">— Belivor, founding principle</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section class="section" id="process">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-label">How we build</span>
+      </div>
+      <div class="process-list reveal">
+        <div class="process-step">
+          <div class="step-num">01</div>
+          <div class="step-title">Identify</div>
+          <div class="step-desc">Spot the category gap before the market names it. Move on asymmetric insight.</div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">02</div>
+          <div class="step-title">Architect</div>
+          <div class="step-desc">Design for vertical scalability from day one. Build the infrastructure, not just the product.</div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">03</div>
+          <div class="step-title">Validate</div>
+          <div class="step-desc">Ship fast. Get real signal. Iterate on traction, not assumptions.</div>
+        </div>
+        <div class="process-step">
+          <div class="step-num">04</div>
+          <div class="step-title">Exit</div>
+          <div class="step-desc">Strategic acquisition, partnership, or scale. Every venture has a designed exit path.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="section" id="contact">
+    <div class="container">
+      <div class="contact-grid">
+        <div class="contact-left reveal">
+          <h2>Let's build<br><em style="font-style:italic;color:var(--accent)">together.</em></h2>
+          <p>
+            Interested in partnership, investment, acquisition, or joining
+            the Belivor portfolio? Reach out directly.
+          </p>
+          <a href="mailto:hello@belivor.com" class="contact-email">hello@belivor.com</a>
+        </div>
+        <div class="reveal">
+          <!-- Replace ACTION_URL below with your Formspree endpoint: https://formspree.io/f/YOUR_ID -->
+          <form
+            class="contact-form"
+            action="https://formspree.io/f/YOUR_FORMSPREE_ID"
+            method="POST"
+          >
+            <div class="form-row">
+              <input type="text" name="name" placeholder="Your name" required />
+              <input type="email" name="email" placeholder="Email address" required />
+            </div>
+            <select name="inquiry">
+              <option value="" disabled selected>Type of inquiry</option>
+              <option value="partnership">Partnership</option>
+              <option value="investment">Investment</option>
+              <option value="acquisition">Acquisition inquiry</option>
+              <option value="join">Join a venture</option>
+              <option value="other">Other</option>
+            </select>
+            <textarea name="message" placeholder="Tell me what you're thinking..." required></textarea>
+            <button type="submit" class="form-submit">Send message →</button>
+            <p class="form-note">Typically respond within 48 hours.</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-logo">Belivor</div>
+        <ul class="footer-links">
+          <li><a href="#ventures">Ventures</a></li>
+          <li><a href="#thesis">Thesis</a></li>
+          <li><a href="#process">Process</a></li>
+          <li><a href="mailto:hello@belivor.com">Contact</a></li>
+        </ul>
+        <div class="footer-copy">© 2025 Belivor. All rights reserved.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), i * 80);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => observer.observe(el));
+
+    // Mobile nav
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    hamburger.addEventListener('click', () => {
+      navLinks.classList.toggle('open');
+    });
+
+    // Cursor dot (desktop only)
+    const cursor = document.getElementById('cursor');
+    let cursorVisible = false;
+    document.addEventListener('mousemove', (e) => {
+      cursor.style.left = (e.clientX - 3) + 'px';
+      cursor.style.top  = (e.clientY - 3) + 'px';
+      if (!cursorVisible) { cursor.style.opacity = '1'; cursorVisible = true; }
+    });
+    document.addEventListener('mouseleave', () => { cursor.style.opacity = '0'; cursorVisible = false; });
+
+    // Hover pulse on venture cards
+    document.querySelectorAll('.venture-card').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        cursor.style.transform = 'scale(3)';
+        cursor.style.opacity = '0.4';
+      });
+      card.addEventListener('mouseleave', () => {
+        cursor.style.transform = 'scale(1)';
+        cursor.style.opacity = '1';
+      });
+    });
+
+    // Form submission feedback
+    const form = document.querySelector('.contact-form');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        const btn = form.querySelector('.form-submit');
+        btn.textContent = 'Sending...';
+        btn.style.opacity = '0.6';
+      });
+    }
+  </script>
+
+</body>
+</html>
