@@ -343,6 +343,531 @@ const ctx = canvas.getContext('2d');
 const tooltip = document.getElementById('tooltip');
 
 const NODES = [
+  { id:'mission', label:['Help the','most people'], sub:'', url:'', type:'mission', verticals:[], size:18 },
+  { id:'belivor', label:['Belivor'], sub:'Venture Architecture', url:'#', type:'hub', verticals:['Architecture','Scalability','Exit Strategy'], size:14 },
+  { id:'chatgptesus', label:['ChatGPTesus'], sub:'chatgptesus.com', url:'https://chatgptesus.com', type:'venture', verticals:['AI & ML','Spirituality','Mental Wellness'], size:9 },
+  { id:'thewatchist', label:['The Watchist'], sub:'thewatchist.com', url:'https://thewatchist.com', type:'venture', verticals:['Alt Assets','Luxury','Marketplace'], size:9 },
+  { id:'richeiq', label:['RicheIQ'], sub:'richeiq.com', url:'https://richeiq.com', type:'venture', verticals:['Fintech','Alt Credit','Data'], size:9 },
+  { id:'zerosided', label:['ZeroSided'], sub:'zerosided.com', url:'https://zerosided.com', type:'venture', verticals:['Crypto','DeFi','Social Impact'], size:9 },
+  { id:'bandhbio', label:['BandHBio'], sub:'bandhbio.com', url:'https://bandhbio.com', type:'venture', verticals:['Biotech','Longevity','DTC Health'], size:9 },
+  { id:'opensafe', label:['OpenSafe'], sub:'Coming soon', url:'#contact', type:'venture', verticals:['Healthcare','Mental Health','Spiritual'], size:9 },
+  { id:'c_finance', label:['Financial','Freedom'], sub:'', url:'', type:'cluster', verticals:[], size:5 },
+  { id:'c_health', label:['Whole-Person','Health'], sub:'', url:'', type:'cluster', verticals:[], size:5 },
+  { id:'c_faith', label:['Faith &','Purpose'], sub:'', url:'', type:'cluster', verticals:[], size:5 },
+];
+
+const EDGES = [
+  ['mission','belivor',1.0],
+  ['belivor','chatgptesus',0.65],['belivor','thewatchist',0.65],['belivor','richeiq',0.65],
+  ['belivor','zerosided',0.65],['belivor','bandhbio',0.65],['belivor','opensafe',0.65],
+  ['zerosided','richeiq',0.5],['richeiq','thewatchist',0.45],['zerosided','thewatchist',0.28],
+  ['bandhbio','opensafe',0.55],['chatgptesus','opensafe',0.45],['opensafe','richeiq',0.22],
+  ['chatgptesus','zerosided',0.22],['chatgptesus','bandhbio',0.22],
+  ['c_finance','zerosided',0.18],['c_finance','richeiq',0.18],['c_finance','thewatchist',0.18],
+  ['c_health','bandhbio',0.18],['c_health','opensafe',0.18],
+  ['c_faith','chatgptesus',0.18],['c_faith','opensafe',0.18],
+];
+
+NODES[0].p = {x:0,y:0,z:0};
+NODES[1].p = {x:0,y:0,z:130};
+
+const ventureIdx = [2,3,4,5,6,7];
+ventureIdx.forEach((ni,i) => {
+  const a = (i/ventureIdx.length)*Math.PI*2;
+  const wobble = (i%2===0?1:-1)*55;
+  NODES[ni].p = { x:Math.cos(a)*320, y:Math.sin(a)*270+wobble, z:Math.cos(a*0.8)*85 };
+});
+
+const clusterIdx = [8,9,10];
+clusterIdx.forEach((ni,i) => {
+  const a = (i/clusterIdx.length)*Math.PI*2+1.0;
+  NODES[ni].p = { x:Math.cos(a)*470, y:Math.sin(a)*420, z:Math.sin(a)*105 };
+});
+
+let rotX=0.18, rotY=0, tRotX=0.18, tRotY=0;
+let dragging=false, lmx=0, lmy=0, autoRot=true, hovered=null, tick=0;
+
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  canvas.width = r.width;
+  canvas.height = r.height;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function proj(p) {
+  const cx=Math.cos(rotX),sx=Math.sin(rotX),cy=Math.cos(rotY),sy=Math.sin(rotY);
+  const y1=p.y*cx-p.z*sx, z1=p.y*sx+p.z*cx;
+  const x2=p.x*cy+z1*sy, z2=-p.x*sy+z1*cy;
+  const f=550, sc=f/(f+z2+300);
+  return { x:canvas.width/2+x2*sc, y:canvas.height/2+y1*sc, z:z2, sc };
+}
+
+// Draw label pill ABOVE the node
+function drawLabel(node, p, df, isH) {
+  const lines = node.label;
+  const fs = Math.max(9, Math.round(10 * p.sc));
+  ctx.font = `500 ${fs}px DM Mono`;
+
+  // Measure widest line
+  let maxW = 0;
+  lines.forEach(line => { maxW = Math.max(maxW, ctx.measureText(line).width); });
+  const padX = 8, padY = 4;
+  const lineH = fs * 1.25;
+  const boxW = maxW + padX * 2;
+  const boxH = lineH * lines.length + padY * 2 - 2;
+
+  // Position: above the node
+  const nodeR = node.size * p.sc;
+  const offsetY = nodeR + 10;
+  const boxX = p.x - boxW / 2;
+  const boxY = p.y - offsetY - boxH;
+
+  // Subtle background pill
+  const bgAlpha = (isH ? 0.85 : 0.5) * df;
+  ctx.fillStyle = `rgba(0,0,0,${bgAlpha})`;
+  ctx.fillRect(boxX, boxY, boxW, boxH);
+
+  // Border
+  const borderAlpha = (isH ? 0.4 : 0.15) * df;
+  ctx.strokeStyle = `rgba(245,240,232,${borderAlpha})`;
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+  // Text
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const textColor = node.type === 'mission' ? 1
+                  : node.type === 'hub' ? 0.95
+                  : node.type === 'cluster' ? 0.5
+                  : (isH ? 1 : 0.78);
+  ctx.fillStyle = `rgba(245,240,232,${textColor * df})`;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, p.x, boxY + padY + i * lineH);
+  });
+}
+
+function draw() {
+  tick++;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const pts = NODES.map(n=>({n, p:proj(n.p)}));
+  pts.sort((a,b)=>a.p.z-b.p.z);
+
+  // Edges
+  EDGES.forEach(([a,b,str]) => {
+    const pa=pts.find(p=>p.n.id===a), pb=pts.find(p=>p.n.id===b);
+    if(!pa||!pb) return;
+    const df=Math.max(0.04,Math.min(0.55,(Math.min(pa.p.z,pb.p.z)+360)/540));
+    ctx.beginPath(); ctx.moveTo(pa.p.x,pa.p.y); ctx.lineTo(pb.p.x,pb.p.y);
+    ctx.strokeStyle=`rgba(245,240,232,${str*df*0.3})`;
+    ctx.lineWidth=str*1.0; ctx.stroke();
+  });
+
+  // Nodes (dots only first, labels go on top in second pass)
+  pts.forEach(({n,p}) => {
+    const df=Math.max(0.2,Math.min(1,(p.z+360)/540));
+    const isH=hovered===n.id;
+    const sz=n.size*p.sc*(isH?1.5:1);
+
+    if(n.type==='mission') {
+      const pulse=1+Math.sin(tick*0.04)*0.13;
+      ctx.beginPath(); ctx.arc(p.x,p.y,sz*pulse*2.2,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.025)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x,p.y,sz*pulse,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${0.92*df})`; ctx.fill();
+    } else if(n.type==='hub') {
+      ctx.beginPath(); ctx.arc(p.x,p.y,sz*1.7,0,Math.PI*2);
+      ctx.fillStyle='rgba(245,240,232,0.04)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x,p.y,sz,0,Math.PI*2);
+      ctx.fillStyle=`rgba(245,240,232,${0.88*df})`; ctx.fill();
+    } else if(n.type==='cluster') {
+      ctx.beginPath(); ctx.arc(p.x,p.y,sz,0,Math.PI*2);
+      ctx.fillStyle=`rgba(100,95,90,${0.4*df})`; ctx.fill();
+    } else {
+      if(isH) { ctx.beginPath(); ctx.arc(p.x,p.y,sz*2.4,0,Math.PI*2); ctx.fillStyle='rgba(245,240,232,0.05)'; ctx.fill(); }
+      ctx.beginPath(); ctx.arc(p.x,p.y,sz,0,Math.PI*2);
+      ctx.fillStyle=`rgba(245,240,232,${(isH?1:0.72)*df})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x,p.y,sz*1.8,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(245,240,232,${0.1*df})`; ctx.lineWidth=0.5; ctx.stroke();
+    }
+  });
+
+  // Labels in second pass (so they sit on top of all dots)
+  pts.forEach(({n,p}) => {
+    const df=Math.max(0.2,Math.min(1,(p.z+360)/540));
+    const isH=hovered===n.id;
+    drawLabel(n, p, df, isH);
+  });
+
+  if(autoRot) rotY+=0.0009;
+  rotX+=(tRotX-rotX)*0.07;
+  rotY+=(tRotY-rotY)*0.07;
+  requestAnimationFrame(draw);
+}
+
+function hit(mx,my) {
+  let best=null, bd=36;
+  NODES.forEach(n => {
+    const p=proj(n.p);
+    const d=Math.hypot(mx-p.x,my-p.y);
+    const r=n.size*p.sc*3;
+    if(d<r&&d<bd){best=n;bd=d;}
+  });
+  return best;
+}
+
+canvas.addEventListener('mousedown',e=>{ dragging=true; autoRot=false; lmx=e.clientX; lmy=e.clientY; });
+window.addEventListener('mousemove',e=>{
+  if(dragging){
+    tRotY+=(e.clientX-lmx)*0.007; tRotX+=(e.clientY-lmy)*0.007;
+    lmx=e.clientX; lmy=e.clientY;
+  } else {
+    const r=canvas.getBoundingClientRect();
+    const h=hit(e.clientX-r.left, e.clientY-r.top);
+    if(h&&h.type!=='mission'&&h.type!=='cluster'){
+      hovered=h.id; canvas.style.cursor='pointer';
+      document.getElementById('tt-name').textContent=h.label.join(' ');
+      document.getElementById('tt-url').textContent=h.sub;
+      document.getElementById('tt-tags').innerHTML=h.verticals.map(v=>`<span class="tt-tag">${v}</span>`).join('');
+      tooltip.style.left=(e.clientX+16)+'px'; tooltip.style.top=(e.clientY-10)+'px';
+      tooltip.classList.add('visible');
+    } else {
+      hovered=null; canvas.style.cursor='grab'; tooltip.classList.remove('visible');
+    }
+  }
+});
+window.addEventListener('mouseup',()=>{ dragging=false; setTimeout(()=>{autoRot=true;},3500); });
+
+canvas.addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect();
+  const h=hit(e.clientX-r.left, e.clientY-r.top);
+  if(!h) return;
+  if(h.url&&h.url.startsWith('http')) window.open(h.url,'_blank');
+  else if(h.url==='#contact') document.querySelector('#contact').scrollIntoView({behavior:'smooth'});
+  else if(h.url==='#') window.scrollTo({top:0,behavior:'smooth'});
+});
+
+let ltx=0,lty=0;
+canvas.addEventListener('touchstart',e=>{ autoRot=false; if(e.touches.length===1){ltx=e.touches[0].clientX;lty=e.touches[0].clientY;} },{passive:true});
+canvas.addEventListener('touchmove',e=>{ if(e.touches.length===1){ tRotY+=(e.touches[0].clientX-ltx)*0.009; tRotX+=(e.touches[0].clientY-lty)*0.009; ltx=e.touches[0].clientX;lty=e.touches[0].clientY; } },{passive:true});
+canvas.addEventListener('touchend',()=>{ setTimeout(()=>{autoRot=true;},4000); });
+
+document.getElementById('hamburger').addEventListener('click',()=>{
+  document.getElementById('nav-links').classList.toggle('open');
+});
+
+draw();
+</script>
+</body>
+</html>    .nav-ham { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 4px; }
+    .nav-ham span { display: block; width: 20px; height: 1px; background: var(--muted); }
+    .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 52px; left: 0; right: 0; background: var(--bg); border-bottom: 1px solid var(--border); padding: 20px 32px; gap: 16px; z-index: 99; }
+
+    /* HERO — fully separated stacks */
+    #hero {
+      padding-top: 52px;
+      background: var(--bg);
+    }
+
+    /* Section 1: Orbital map (clearly its own block) */
+    #map-section {
+      width: 100%;
+      height: calc(100vh - 52px);
+      min-height: 520px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #neural-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+    #neural-canvas:active { cursor: grabbing; }
+
+    .map-instructions {
+      position: absolute;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* Section 2: Hero text (its own block, below the map) */
+    #hero-text-section {
+      width: 100%;
+      padding: 80px 24px 96px;
+      text-align: center;
+    }
+    .hero-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--muted); margin-bottom: 16px; }
+    .hero-title { font-family: 'DM Serif Display', serif; font-size: clamp(38px, 6vw, 68px); line-height: 1.05; letter-spacing: -1.5px; color: var(--ink); margin-bottom: 20px; }
+    .hero-title em { font-style: italic; }
+    .hero-body { font-size: 13px; color: var(--muted); line-height: 1.9; max-width: 480px; margin: 0 auto 36px; }
+    .hero-scroll { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); animation: blink 2.5s ease-in-out infinite; display: inline-block; }
+    @keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:0.9} }
+
+    /* TOOLTIP */
+    #tooltip { position: fixed; z-index: 300; pointer-events: none; background: rgba(0,0,0,0.95); border: 1px solid rgba(245,240,232,0.15); padding: 12px 16px; max-width: 220px; opacity: 0; transition: opacity 0.15s; font-size: 11px; }
+    #tooltip.visible { opacity: 1; }
+    .tt-name { font-family: 'DM Serif Display', serif; font-size: 15px; color: var(--ink); margin-bottom: 3px; }
+    .tt-url { font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+    .tt-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+    .tt-tag { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 6px; border: 1px solid var(--border); color: var(--muted); }
+    .tt-click { font-size: 9px; color: var(--muted); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.08em; border-top: 1px solid var(--border); padding-top: 8px; }
+
+    /* SECTIONS */
+    .container { max-width: 1000px; margin: 0 auto; padding: 0 32px; }
+    section { padding: 80px 0; border-top: 1px solid var(--border); }
+    .sec-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 36px; }
+
+    /* VENTURES */
+    .ventures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+    .venture-card { background: var(--bg); padding: 32px; text-decoration: none; color: inherit; display: block; transition: background 0.2s; }
+    .venture-card:hover { background: var(--card); }
+    .venture-card.featured { grid-column: 1/-1; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start; }
+    .vc-stage { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; padding: 3px 8px; border: 1px solid; display: inline-block; margin-bottom: 14px; }
+    .stage-mvp { border-color: rgba(245,240,232,0.35); color: var(--ink); }
+    .stage-building { border-color: rgba(245,240,232,0.15); color: var(--muted); }
+    .stage-research { border-color: #2a2a2a; color: #555; }
+    .vc-name { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); margin-bottom: 5px; line-height: 1.1; }
+    .venture-card.featured .vc-name { font-size: 28px; }
+    .vc-url { font-size: 10px; color: var(--muted); margin-bottom: 10px; letter-spacing: 0.04em; }
+    .vc-desc { font-size: 12px; color: var(--muted); line-height: 1.8; }
+    .vc-arrow { font-size: 20px; color: #444; transition: color 0.2s, transform 0.2s; }
+    .venture-card:hover .vc-arrow { color: var(--ink); transform: translate(3px,-3px); }
+    .vc-verticals { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+    .vc-vert { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 7px; border: 1px solid #2a2a2a; color: var(--muted); }
+
+    /* THESIS */
+    .thesis-block { border: 1px solid var(--border); padding: 48px; position: relative; overflow: hidden; }
+    .thesis-block::before { content:'\201C'; position:absolute; top:-20px; left:24px; font-family:'DM Serif Display',serif; font-size:160px; color:var(--ink); opacity:0.04; line-height:1; pointer-events:none; }
+    .thesis-text { font-family:'DM Serif Display',serif; font-size:clamp(19px,2.8vw,26px); line-height:1.55; color:var(--ink); font-style:italic; position:relative; z-index:1; margin-bottom:22px; }
+    .thesis-attr { font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:var(--muted); }
+
+    /* PROCESS */
+    .process-list { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); border:1px solid var(--border); }
+    .process-step { background:var(--bg); padding:32px 24px; }
+    .step-num { font-family:'DM Serif Display',serif; font-size:38px; color:var(--ink); opacity:0.08; line-height:1; margin-bottom:18px; }
+    .step-title { font-size:10px; font-weight:500; color:var(--ink); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.1em; }
+    .step-desc { font-size:11px; color:var(--muted); line-height:1.75; }
+
+    /* CONTACT */
+    .contact-grid { display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:start; }
+    .contact-left h2 { font-family:'DM Serif Display',serif; font-size:34px; color:var(--ink); line-height:1.15; margin-bottom:16px; letter-spacing:-0.5px; }
+    .contact-left p { font-size:12px; color:var(--muted); line-height:1.8; margin-bottom:24px; }
+    .contact-email { color:var(--ink); font-size:12px; text-decoration:none; border-bottom:1px solid rgba(245,240,232,0.25); padding-bottom:2px; }
+    .contact-form { display:flex; flex-direction:column; gap:10px; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .contact-form input,.contact-form textarea,.contact-form select { width:100%; background:transparent; border:1px solid var(--border); padding:12px 14px; font-family:'DM Mono',monospace; font-size:11px; color:var(--ink); outline:none; transition:border-color 0.2s; -webkit-appearance:none; border-radius:0; }
+    .contact-form input::placeholder,.contact-form textarea::placeholder { color:var(--muted); }
+    .contact-form input:focus,.contact-form textarea:focus,.contact-form select:focus { border-color:rgba(245,240,232,0.35); }
+    .contact-form textarea { resize:vertical; min-height:100px; }
+    .contact-form select { color:var(--muted); }
+    .contact-form select option { background:#111; color:var(--ink); }
+    .form-submit { background:var(--ink); color:var(--bg); font-family:'DM Mono',monospace; font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:0.12em; border:none; padding:14px 24px; cursor:pointer; transition:opacity 0.2s; align-self:flex-start; border-radius:0; }
+    .form-submit:hover { opacity:0.82; }
+    .form-note { font-size:10px; color:var(--muted); }
+
+    /* FOOTER */
+    footer { border-top:1px solid var(--border); padding:28px 0; }
+    .footer-inner { display:flex; justify-content:space-between; align-items:center; }
+    .footer-logo { font-family:'DM Serif Display',serif; font-size:18px; color:var(--ink); }
+    .footer-links { display:flex; gap:24px; list-style:none; }
+    .footer-links a { font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); text-decoration:none; transition:color 0.2s; }
+    .footer-links a:hover { color:var(--ink); }
+    .footer-copy { font-size:10px; color:#333; }
+
+    /* RESPONSIVE */
+    @media(max-width:700px) {
+      .container { padding:0 20px; }
+      .nav-links,.nav-cta { display:none; }
+      .nav-ham { display:flex; }
+      #map-section { height: calc(75vh - 52px); min-height: 460px; }
+      #hero-text-section { padding: 60px 20px 80px; }
+      .ventures-grid,.contact-grid { grid-template-columns:1fr; }
+      .venture-card.featured { grid-template-columns:1fr; }
+      .process-list { grid-template-columns:1fr 1fr; }
+      .form-row { grid-template-columns:1fr; }
+      .footer-inner { flex-direction:column; gap:16px; text-align:center; }
+      .footer-links { flex-wrap:wrap; justify-content:center; }
+    }
+    @media(max-width:480px) { .process-list { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+<div id="tooltip">
+  <div class="tt-name" id="tt-name"></div>
+  <div class="tt-url" id="tt-url"></div>
+  <div class="tt-tags" id="tt-tags"></div>
+  <div class="tt-click">Click to explore ↗</div>
+</div>
+
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">Belivor</a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#ventures">Ventures</a></li>
+      <li><a href="#thesis">Thesis</a></li>
+      <li><a href="#process">Process</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <a href="#contact" class="nav-cta">Get in touch</a>
+    <button class="nav-ham" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div id="hero">
+
+  <!-- Section 1: 3D Map -->
+  <div id="map-section">
+    <canvas id="neural-canvas"></canvas>
+    <div class="map-instructions">Drag to rotate · Click any node to explore</div>
+  </div>
+
+  <!-- Section 2: Hero Text (separate block, below map) -->
+  <div id="hero-text-section">
+    <div class="hero-eyebrow">Venture Architecture</div>
+    <h1 class="hero-title">Building vertically.<br><em>Exiting brilliantly.</em></h1>
+    <p class="hero-body">Belivor is the holding architecture behind a portfolio of rapidly developed, vertically scalable businesses — spanning AI, alternative assets, biotech, fintech, and beyond.</p>
+    <div class="hero-scroll">↓ Scroll to discover</div>
+  </div>
+
+</div>
+
+<!-- VENTURES -->
+<section id="ventures">
+  <div class="container">
+    <div class="sec-label">Current portfolio — 07 ventures</div>
+    <div class="ventures-grid">
+      <a class="venture-card featured" href="https://chatgptesus.com" target="_blank" rel="noopener">
+        <div>
+          <div class="vc-stage stage-mvp">MVP ready</div>
+          <div class="vc-name">ChatGPTesus</div>
+          <div class="vc-url">chatgptesus.com</div>
+          <div class="vc-desc">A faith-rooted AI companion. Answers life's hardest questions through a Christian lens — built on modern LLM infrastructure with a voice shaped by scripture, wisdom, and grace.</div>
+          <div class="vc-verticals"><span class="vc-vert">AI & ML</span><span class="vc-vert">Spirituality</span><span class="vc-vert">Mental Wellness</span><span class="vc-vert">Consumer Internet</span></div>
+        </div>
+        <div class="vc-arrow">↗</div>
+      </a>
+      <a class="venture-card" href="https://thewatchist.com" target="_blank" rel="noopener">
+        <div class="vc-stage stage-building">Building</div>
+        <div class="vc-name">The Watchist</div>
+        <div class="vc-url">thewatchist.com</div>
+        <div class="vc-desc">Alternative asset trading platform for luxury watches. Authenticated. Liquid. Yours.</div>
+        <div class="vc-verticals"><span class="vc-vert">Alt Assets</span><span class="vc-vert">Luxury</span><span class="vc-vert">Marketplace</span></div>
+      </a>
+      <a class="venture-card" href="https://richeiq.com" target="_blank" rel="noopener">
+        <div class="vc-stage stage-research">Research</div>
+        <div class="vc-name">RicheIQ</div>
+        <div class="vc-url">richeiq.com</div>
+        <div class="vc-desc">An alternative credit score built on real asset ownership — watches, cars, art, real estate.</div>
+        <div class="vc-verticals"><span class="vc-vert">Fintech</span><span class="vc-vert">Alt Credit</span><span class="vc-vert">Data</span></div>
+      </a>
+      <a class="venture-card" href="https://zerosided.com" target="_blank" rel="noopener">
+        <div class="vc-stage stage-building">Building</div>
+        <div class="vc-name">ZeroSided</div>
+        <div class="vc-url">zerosided.com</div>
+        <div class="vc-desc">Crypto 100x sniper. Mission: financial sovereignty and liberation from the central banking paradigm.</div>
+        <div class="vc-verticals"><span class="vc-vert">Crypto</span><span class="vc-vert">DeFi</span><span class="vc-vert">Social Impact</span></div>
+      </a>
+      <a class="venture-card" href="https://bandhbio.com" target="_blank" rel="noopener">
+        <div class="vc-stage stage-building">Building</div>
+        <div class="vc-name">BandHBio</div>
+        <div class="vc-url">bandhbio.com</div>
+        <div class="vc-desc">Building the future of personal health supply. Starting with medical-grade exosomes and expanding into peptides, supplements, rife technology, and beyond — a full catalog for those who take their biology seriously.</div>
+        <div class="vc-verticals"><span class="vc-vert">Biotech</span><span class="vc-vert">Longevity</span><span class="vc-vert">DTC Health</span></div>
+      </a>
+      <a class="venture-card" href="#contact">
+        <div class="vc-stage stage-research">Research</div>
+        <div class="vc-name">OpenSafe</div>
+        <div class="vc-url">Coming soon</div>
+        <div class="vc-desc">Open 24/7. A sanctuary for physical, mental, and spiritual health — a new model for human care.</div>
+        <div class="vc-verticals"><span class="vc-vert">Healthcare</span><span class="vc-vert">Mental Health</span><span class="vc-vert">Spiritual</span></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- THESIS -->
+<section id="thesis">
+  <div class="container">
+    <div class="sec-label">The thesis</div>
+    <div class="thesis-block">
+      <p class="thesis-text">"The best businesses don't fill a gap — they create a category. We build the category, validate the model, then architect the exit. Every venture feeds the next. Nothing is siloed. Everything compounds."</p>
+      <div class="thesis-attr">— Belivor, founding principle</div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section id="process">
+  <div class="container">
+    <div class="sec-label">How we build</div>
+    <div class="process-list">
+      <div class="process-step"><div class="step-num">01</div><div class="step-title">Identify</div><div class="step-desc">Spot the category gap before the market names it. Move on asymmetric insight.</div></div>
+      <div class="process-step"><div class="step-num">02</div><div class="step-title">Architect</div><div class="step-desc">Design for vertical scalability from day one. Build the infrastructure, not just the product.</div></div>
+      <div class="process-step"><div class="step-num">03</div><div class="step-title">Validate</div><div class="step-desc">Ship fast. Get real signal. Iterate on traction, not assumptions.</div></div>
+      <div class="process-step"><div class="step-num">04</div><div class="step-title">Exit</div><div class="step-desc">Strategic acquisition, partnership, or scale. Every venture has a designed exit path.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="container">
+    <div class="contact-grid">
+      <div class="contact-left">
+        <h2>Let's build<br><em style="font-style:italic">together.</em></h2>
+        <p>Interested in partnership, investment, acquisition, or joining the Belivor portfolio? Reach out directly.</p>
+        <a href="mailto:hello@belivor.com" class="contact-email">hello@belivor.com</a>
+      </div>
+      <div>
+        <form class="contact-form" action="https://formspree.io/f/YOUR_FORMSPREE_ID" method="POST">
+          <div class="form-row">
+            <input type="text" name="name" placeholder="Your name" required />
+            <input type="email" name="email" placeholder="Email address" required />
+          </div>
+          <select name="inquiry"><option value="" disabled selected>Type of inquiry</option><option value="partnership">Partnership</option><option value="investment">Investment</option><option value="acquisition">Acquisition inquiry</option><option value="join">Join a venture</option><option value="other">Other</option></select>
+          <textarea name="message" placeholder="Tell me what you're thinking..." required></textarea>
+          <button type="submit" class="form-submit">Send message →</button>
+          <p class="form-note">Typically respond within 48 hours.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">Belivor</div>
+      <ul class="footer-links">
+        <li><a href="#ventures">Ventures</a></li>
+        <li><a href="#thesis">Thesis</a></li>
+        <li><a href="#process">Process</a></li>
+        <li><a href="mailto:hello@belivor.com">Contact</a></li>
+      </ul>
+      <div class="footer-copy">© 2025 Belivor. All rights reserved.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const canvas = document.getElementById('neural-canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+const NODES = [
   { id:'mission', label:['Help the','most people'], sub:'', url:'', type:'mission', verticals:[], size:14 },
   { id:'belivor', label:['Belivor'], sub:'Venture Architecture', url:'#', type:'hub', verticals:['Architecture','Scalability','Exit Strategy'], size:11 },
   { id:'chatgptesus', label:['ChatGPTesus'], sub:'chatgptesus.com', url:'https://chatgptesus.com', type:'venture', verticals:['AI & ML','Spirituality','Mental Wellness'], size:7 },
